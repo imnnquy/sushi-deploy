@@ -1,0 +1,290 @@
+<!-- Created using vQmod XML Generator by UKSB - http://uksb.github.com/vqgen/ //-->
+<modification>
+	<id><![CDATA[Opencart Product Google Map]]></id>
+	<version><![CDATA[1.2.0]]></version>
+	<vqmver><![CDATA[2.5.1]]></vqmver>
+	<author><![CDATA[Alex Tham]]></author>
+	<file path="admin/controller/catalog/" name="product.php">
+		<operation>
+			<search position="before" error="skip"><![CDATA[if (isset($this->request->post['location'])) {]]></search>
+			<add><![CDATA[		if (isset($this->request->post['rvgmap'])) {
+			$data['rvgmap'] = $this->request->post['rvgmap'];
+		} elseif (!empty($product_info)) {
+			$data['rvgmap'] = $product_info['rvgmap'];
+		} else {
+			$data['rvgmap'] = '';
+		}]]></add>
+		</operation>
+		<operation>
+			<search position="before"><![CDATA[$data['entry_location'] = $this->language->get('entry_location');]]></search>
+			<add><![CDATA[$data['entry_rvgmap'] = $this->language->get('entry_rvgmap');
+$data['entry_rvgmap_placeholder'] = $this->language->get('entry_rvgmap_placeholder');]]></add>
+		</operation>
+		<operation>
+			<search position="after" error="skip"><![CDATA[$data['tab_links'] = $this->language->get('tab_links');]]></search>
+			<add><![CDATA[$data['tab_rvgmap'] = $this->language->get('tab_rvgmap');]]></add>
+		</operation>
+	</file>
+	<file path="admin/view/template/catalog/" name="product_form.tpl">
+		<operation>
+			<search position="after"><![CDATA[<li><a href="#tab-links" data-toggle="tab"><?php echo $tab_links; ?></a></li>]]></search>
+			<add><![CDATA[<li><a href="#tab-rvgmap" data-toggle="tab"><?php echo $tab_rvgmap; ?></a></li>]]></add>
+		</operation>
+		<operation>
+			<search position="before" error="skip"><![CDATA[<div class="tab-pane" id="tab-links">]]></search>
+			<add><![CDATA[<div class="tab-pane" id="tab-rvgmap">
+
+ <div class="form-group">
+  	  <label class="col-sm-2 control-label" for="input-rvgmap"><?php echo $entry_rvgmap; ?></label>
+     <div class="col-sm-10">
+          <input type="text" name="rvgmap" value="<?php echo $rvgmap; ?>" placeholder="<?php echo $entry_rvgmap_placeholder; ?>" id="input-rvgmap" class="form-control" /><br /><br />
+	  <style>
+        #map_canvas {display:inline-block; vertical-align:top; width:300px; height:240px;border: 1px solid #999;margin-top:5px;}
+		#map-canvas-geocoding {height: 100%;width: 100%;display: inline-block;margin:0 auto; position:relative;}
+        #panel {position: relative;z-index: 5;padding: 15px; display:inline-block;}
+		.rv-divider {display: block; width:100%; height:1px; background:#999; margin:15px 0px;}
+      </style>
+  	<?php if ($rvgmap) { ?>
+      <div id="map_canvas"></div>
+    <?php } ?>
+	 <div style="border: 1px solid #999; display:inline-block; vertical-align:top; margin-top:5px;">
+	 <div style="display:inline-block; vertical-align:top; position:relative; width:300px; height:240px; margin-left:0px;"> 
+    	<div id="map-canvas-geocoding"></div>
+	</div>
+		<div id="panel">
+		<h3>COORDINATES SEARCH</h3>
+		  Key in any street address or coordinates.<br>
+		  Example: 1-15 Centre St, New York<br><br>
+		  <input id="address" style="width:100%;" type="textbox" value=""></input><br><br>
+		  <input type="button" style="width:100%; text-align:center;" value="Get Coordinates" onclick="codeAddress()"></input>
+		  <div class="rv-divider"></div>
+		  <h4 style="text-align:center; color:#FF0004"><strong><span id="lat"></span><span id="comma"></span> <span id="lng"></span></strong></h4>
+		</div>
+	</div>
+    <script src="https://maps.googleapis.com/maps/api/js?=v=3.exp&sensor=false"></script>
+    <script>
+        window.onload = function () {  
+            var styles = [{
+                stylers: [
+              { "saturation": 0 }
+                ]
+              }];  
+            var options = {  
+            mapTypeControlOptions: {  
+                mapTypeIds: ['Styled']  
+            },  
+                center: new google.maps.LatLng(<?php echo $rvgmap; ?>),  
+                zoom: 17,  
+                disableDefaultUI: false,
+                scrollwheel: false,
+                mapTypeId: 'Styled'  
+            };
+            var div = document.getElementById('map_canvas');  
+            var map = new google.maps.Map(div, options);  
+            var styledMapType = new google.maps.StyledMapType(styles, { name: '<?php $str = isset($product_description[$language['language_id']]) ? $product_description[$language['language_id']]['name'] : ''; echo htmlspecialchars_decode($str); ?>' });
+            map.mapTypes.set('Styled', styledMapType);
+          
+          var image = '../image/catalog/map-marker.png';
+          
+          var myLoc = '';
+          
+          var marker = new google.maps.Marker({
+            position: new google.maps.LatLng(<?php echo $rvgmap; ?>),
+            icon: image,
+            map: map
+          });
+          $('a[href=#tab-rvgmap]').on('click', function() {
+        setTimeout(function(){
+             google.maps.event.trigger(map, 'resize');
+             map.setZoom(17); //You need to reset zoom
+             map.setCenter(marker.getPosition()); //You need to reset the center
+        }, 50);
+    });
+        };
+		
+		// Geocode
+		var geocoder;
+        var map;
+       function initialize() {
+		  geocoder = new google.maps.Geocoder();
+		  var latlng = new google.maps.LatLng(40.7033127,-73.979681);
+		  var mapOptions = {
+			zoom: 17,
+			center: latlng,
+			disableDefaultUI: false,
+                mapTypeId: google.maps.MapTypeId.ROADMAP
+            };
+       map = new google.maps.Map(document.getElementById('map-canvas-geocoding'),
+                    mapOptions);
+        }
+		function codeAddress() {
+		  var address = document.getElementById('address').value;
+		  geocoder.geocode( { 'address': address}, function(results, status) {
+			if (status == google.maps.GeocoderStatus.OK) {
+			  map.setCenter(results[0].geometry.location);
+			  var marker = new google.maps.Marker({
+				  map: map,
+				  position: results[0].geometry.location
+			  });
+            var lat = marker.getPosition().lat();
+            var lng = marker.getPosition().lng();
+			jQuery("span[id='lat']").html(lat);
+			jQuery("span[id='comma']").html(',');
+			jQuery("span[id='lng']").html(lng);
+        }
+		  });
+		}
+        // Add a marker to the map and push to the array.
+        function placeMarker(location) {
+            var marker = new google.maps.Marker({
+                position: location,
+                map: map
+            });
+            var lat = marker.getPosition().lat();
+            var lng = marker.getPosition().lng();
+			jQuery("span[id='lat']").html(lat);
+			jQuery("span[id='comma']").html(',');
+			jQuery("span[id='lng']").html(lng);
+        }
+          
+          var marker = new google.maps.Marker({
+            position: new google.maps.LatLng(40.7033127,-73.979681),
+            map: map
+          });
+          $('a[href=#tab-rvgmap]').on('click', function() {
+        setTimeout(function(){
+             google.maps.event.trigger(map, 'resize');
+             map.setZoom(17); //You need to reset zoom
+             map.setCenter(marker.getPosition()); //You need to reset the center
+        }, 50);
+    });
+       google.maps.event.addDomListener(window, 'load', initialize);
+    </script>
+  </div>
+ </div>  
+</div>]]></add>
+		</operation>
+	</file>
+	<file path="admin/language/en-gb/" name="en-gb.php">
+		<operation>
+			<search position="after" error="skip"><![CDATA[$_['tab_links']]]></search>
+			<add><![CDATA[$_['tab_rvgmap'] = 'Map';]]></add>
+		</operation>
+	</file>
+	<file path="admin/model/catalog/" name="product.php">
+		<operation>
+			<search position="replace"><![CDATA[. "', location = '" . $this->db->escape($data['location']) ]]></search>
+			<add><![CDATA[. "', location = '" . $this->db->escape($data['location']) . "', rvgmap = '" . $this->db->escape($data['rvgmap']) ]]></add>
+		</operation>
+	</file>
+	<file path="admin/language/en-gb/catalog/" name="product.php">
+		<operation>
+			<search position="after" error="skip"><![CDATA[$_['heading_title']]]></search>
+			<add><![CDATA[$_['entry_rvgmap']         = 'Google Map Coordinate<br />(Eg: 40.7033127,-73.979681):';
+$_['entry_rvgmap_placeholder']         = '(Eg: 40.7033127,-73.979681):';]]></add>
+		</operation>
+	</file>
+	<file path="catalog/controller/product/" name="product.php">
+		<operation>
+			<search position="before" error="skip"><![CDATA[$data['entry_name'] = $this->language->get('entry_name');]]></search>
+			<add><![CDATA[$data['entry_rvgmap'] = $this->language->get('entry_rvgmap');]]></add>
+		</operation>
+		<operation>
+			<search position="after" error="skip"><![CDATA[$data['tab_description'] = $this->language->get('tab_description');]]></search>
+			<add><![CDATA[$data['tab_rvgmap'] = $this->language->get('tab_rvgmap');]]></add>
+		</operation>
+		<operation>
+			<search position="after" error="skip"><![CDATA[$data['heading_title'] = $product_info['name'];]]></search>
+			<add><![CDATA[$data['rvgmap'] = $product_info['rvgmap'];]]></add>
+		</operation>
+	</file>
+	<file path="catalog/language/en-gb/product/" name="product.php">
+		<operation>
+			<search position="after" error="skip"><![CDATA[$_['text_search']]]></search>
+			<add><![CDATA[$_['text_rvgmap']       = 'Google Map';]]></add>
+		</operation>
+		<operation>
+			<search position="after" error="skip"><![CDATA[$_['tab_description']]]></search>
+			<add><![CDATA[$_['tab_rvgmap']   = 'Map';]]></add>
+		</operation>
+	</file>
+	<file path="catalog/model/catalog/" name="product.php">
+		<operation>
+			<search position="after" error="skip"><![CDATA['date_modified'    => $query->row['date_modified'],]]></search>
+			<add><![CDATA['rvgmap'    => $query->row['rvgmap'],]]></add>
+		</operation>
+	</file>
+	<file path="catalog/view/theme/*/template/product/" name="product.tpl">
+		<operation>
+			<search position="after" index="1" error="skip"><![CDATA[<li class="active"><a href="#tab-description" data-toggle="tab"><?php echo $tab_description; ?></a></li>]]></search>
+			<add><![CDATA[<?php if ($rvgmap) { ?>
+    <li><a href="#tab-rvgmap" data-toggle="tab"><?php echo $tab_rvgmap; ?></a></li>
+<?php } ?>]]></add>
+		</operation>
+		<operation>
+			<search position="after" error="skip"><![CDATA[<div class="tab-pane active" id="tab-description"><?php echo $description; ?></div>]]></search>
+			<add><![CDATA[<?php if ($rvgmap) { ?>
+
+
+<div class="tab-pane" id="tab-rvgmap">
+
+  <style>
+  	#map_canvas {display:block; width:100%; height:400px;}
+  </style>
+
+     <div id="map_canvas"></div>
+  
+<script src="https://maps.googleapis.com/maps/api/js?=v=3.exp&sensor=false"></script>
+<script>
+    window.onload = function () {  
+        var styles = [{
+            stylers: [
+          { "saturation": 0 }
+            ]
+          }];  
+        var options = {  
+        mapTypeControlOptions: {  
+            mapTypeIds: ['Styled']  
+        },  
+            center: new google.maps.LatLng(<?php echo $rvgmap; ?>),  
+            zoom: 17,  
+            disableDefaultUI: false,
+            scrollwheel: false,
+            mapTypeId: 'Styled'  
+        };
+        var div = document.getElementById('map_canvas');  
+        var map = new google.maps.Map(div, options);  
+        var styledMapType = new google.maps.StyledMapType(styles, { name: '<?php $str = $heading_title; echo htmlspecialchars_decode($str); ?>' });
+        map.mapTypes.set('Styled', styledMapType);
+      
+      var image = 'image/catalog/map-marker.png';
+      
+      var myLoc = '';
+      
+      var marker = new google.maps.Marker({
+        position: new google.maps.LatLng(<?php echo $rvgmap; ?>),
+        icon: image,
+        map: map
+      });
+	  $('a[href=#tab-rvgmap]').on('click', function() {
+    setTimeout(function(){
+         google.maps.event.trigger(map, 'resize');
+         map.setZoom(17); //You need to reset zoom
+         map.setCenter(marker.getPosition()); //You need to reset the center
+    }, 50);
+});
+    };
+    google.maps.event.addDomListener(window, 'load', initialize);
+</script>
+</div>
+  
+<?php } ?>]]></add>
+		</operation>
+	</file>
+	<file path="admin/language/en-gb/" name="en-gb.php">
+		<operation>
+			<search position="after" error="skip"><![CDATA[$_['tab_links']]]></search>
+			<add><![CDATA[$_['tab_rvgmap'] = 'Map';]]></add>
+		</operation>
+	</file>
+</modification>
